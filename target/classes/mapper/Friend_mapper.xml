@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper	namespace = "com.spring.tmz.mapper.Friend_mapper">
+	
+	<!-- 김상원 -->
+	<select id = "select_frnd_list_nopaging" resultType = "com.spring.tmz.domain.FriendVO">
+		SELECT * FROM trip.tbl_friend
+	</select>
+	
+	<select id = "select_userinfo_rate" resultType = "com.spring.tmz.domain.Userinfo_rateVO">
+		SELECT * FROM trip.tbl_userinfo_rate WHERE rated_id = #{user_id}
+	</select>
+	
+	<select id = "select_frnd" resultMap = "friend_map">
+		SELECT a.*, b.fuuid, b.ffilename, b.fuploadpath
+		FROM tbl_friend a JOIN tbl_friend_file b ON(a.frnd_no = b.frnd_no)
+		WHERE a.frnd_no = #{frnd_no}
+	</select>
+	
+	<update id = "update_frnd">
+		UPDATE trip.tbl_friend
+		SET frnd_title = #{frnd_title}, frnd_country = #{frnd_country}, frnd_startdate = #{frnd_startdate},
+			frnd_enddate = #{frnd_enddate}, frnd_city = #{frnd_city}, frnd_member_cnt = #{frnd_member_cnt},
+			frnd_content = #{frnd_content}, frnd_moddate = DEFAULT, frnd_continent = #{frnd_continent},
+			frnd_tag = #{frnd_tag}
+		WHERE frnd_no = #{frnd_no}
+	</update>
+	
+	<update id="update_now_mem"><!-- 동행 수락에 따른 frnd_now_mem 1씩 증가 -->
+		UPDATE trip.tbl_friend
+		SET frnd_now_mem = frnd_now_mem + #{frnd_now_mem}
+		WHERE frnd_no = #{frnd_no}
+	</update>
+	
+	<update id = "update_frnd_status">
+		UPDATE trip.tbl_friend
+		SET frnd_status = #{frnd_status}
+		WHERE frnd_no = #{frnd_no}
+	</update>
+	
+	
+	<update id = "update_frnd_delflag">
+		UPDATE trip.tbl_friend
+		SET frnd_delflag = #{frnd_delflag}
+		WHERE frnd_no = #{frnd_no}
+	</update>
+	
+	<insert id = "insert_confirm_party">
+		INSERT INTO tbl_confirm_party(frnd_no, party_member, party_writer_replier)
+			SELECT #{frnd_no}, #{party_member}, #{party_writer_replier}
+			FROM dual
+			WHERE NOT EXISTS(
+				SELECT frnd_no, party_member
+				FROM tbl_confirm_party
+				WHERE frnd_no = #{frnd_no} AND party_member = #{party_member} 
+			)
+	</insert>
+	<!-- ./end 김상원 -->
+	
+	<!-- 한태희 -->
+	<!-- 동행 게시물(Friend) 목록 조회 : 최신 글부터 -->
+	<select id="select_frnd_list" resultMap="friend_map">
+			SELECT a.*, b.fuuid, b.ffilename, b.fuploadpath
+			FROM(
+				SELECT ROWNUM as rn, c.*
+				FROM (
+				      SELECT *
+				      FROM (
+				            SELECT *
+				            FROM  (
+				                    SELECT *
+				                    FROM trip.tbl_friend 
+				                    <if test="country_name != null and country_name != '-- 국가 --'">
+				                   		WHERE frnd_country = #{country_name}
+				                    </if>
+				                    ORDER BY frnd_regdate DESC	
+				                    )
+		                    <if test="continent_name != null and continent_name != '-- 대륙 --'">
+				            	WHERE frnd_continent = #{continent_name}
+			            	</if>
+				     	 ) 
+				      <if test="frnd_startdate != null and !frnd_startdate.equals('')">      
+			      	  	  WHERE frnd_startdate = TO_CHAR(TO_DATE(#{frnd_startdate}), 'yyyy-mm-dd')
+				      </if>
+				      ) c
+				 <![CDATA[
+				 WHERE c.frnd_delflag = 0 AND ROWNUM <= (12 * #{page_num})
+				 ]]>
+		        <if test="keyword != null">
+					AND (c.frnd_title || c.frnd_tag) LIKE '%' || #{keyword} || '%'
+				</if>
+			)a JOIN tbl_friend_file b ON(a.frnd_no = b.frnd_no)
+			<![CDATA[
+			WHERE rn >= ((12 * #{page_num}) - (12 - 1))
+			]]>	
+	</select>
+	
+	<resultMap id="attach_file_map" type="com.spring.tmz.domain.Friend_fileVO" >
+		<result property="fuuid" column="fuuid"/>
+		<result property="ffilename" column="ffilename"/>
+		<result property="fuploadpath" column="fuploadpath"/>
+	</resultMap>
+	
+	<resultMap id="friend_map" type="com.spring.tmz.domain.FriendVO">
+		<result property="frnd_no" column="frnd_no"/>
+		<result property="frnd_title" column="frnd_title"/>
+		<result property="frnd_writer" column="frnd_writer"/>
+		<result property="frnd_startdate" column="frnd_startdate"/>
+		<result property="frnd_enddate" column="frnd_enddate"/>
+		<result property="continent" column="continent"/>
+		<result property="frnd_country" column="frnd_country"/>
+		<result property="frnd_city" column="frnd_city"/>
+		<result property="frnd_content" column="frnd_content"/>
+		<result property="frnd_regdate" column="frnd_regdate"/>
+		<result property="frnd_moddate" column="frnd_moddate"/>
+		<result property="frnd_member_cnt" column="frnd_member_cnt"/>
+		<result property="frnd_delflag" column="frnd_delflag"/>
+		<result property="frnd_status" column="frnd_status"/>
+		<result property="frnd_now_mem" column="frnd_now_mem"/>
+		<result property="frnd_tag" column="frnd_tag"/>
+		<result property="frnd_continent" column="frnd_continent"/>
+		
+		<collection property="attach_file_list" resultMap="attach_file_map"/>
+	</resultMap>
+	
+	<!-- 동행 게시물(Friend) 목록 조회 : 글 번호--><!-- 
+	<select id="select_frnd_list" resultType="com.spring.tmz.domain.FriendVO">
+		SELECT * FROM trip.tbl_friend
+		WHERE frnd_no > 0
+		ORDER BY frnd_no DESC
+	</select> -->
+	
+	<!-- 동행 게시물 등록 -->
+	<insert id="insert_frnd">
+		<selectKey keyProperty="frnd_no" order="BEFORE" resultType="int">
+			SELECT trip.seq_friend.nextval FROM dual
+		</selectKey>
+		
+		INSERT INTO trip.tbl_friend
+		VALUES (#{frnd_no}, #{frnd_title}, #{frnd_writer}, #{frnd_startdate},
+				#{frnd_enddate}, #{frnd_country}, #{frnd_city}, #{frnd_content},
+				DEFAULT, DEFAULT, #{frnd_member_cnt}, DEFAULT, DEFAULT, DEFAULT,
+				#{frnd_tag}, #{frnd_continent})
+	</insert>
+	<!-- ./end 한태희 -->
+	
+</mapper>

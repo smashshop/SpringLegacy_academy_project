@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper	namespace = "com.spring.tmz.mapper.Notice_mapper">
+
+<!-- 공지사항 목록 조회 --><!-- 
+ <select id="select_notice_list" resultType="com.spring.tmz.domain.NoticeVO">
+	 SELECT * FROM trip.tbl_notice
+	 WHERE ntc_no > 0 AND ntc_delflag =0
+	 ORDER BY ntc_no DESC;
+ </select> -->
+
+<!-- 공지사항 목록 조회2(페이징 고려: 삭제 요청 된거 포함) -->
+ <select id="select_notice_list" resultType="com.spring.tmz.domain.NoticeVO">
+ <![CDATA[
+		 SELECT ntc_no, ntc_title, ntc_content, ntc_writer, ntc_regdate, ntc_moddate,  ntc_delflag , ntc_country, ntc_continent,  ntc_like_cnt
+		 FROM ( SELECT /*+ INDEX_DESC (a pk_notice_ntc_no) */ ROWNUM rn, a.*
+		 FROM trip.tbl_notice a
+		 WHERE 
+ ]]>
+<trim prefix="(" suffix=") AND" prefixOverrides="OR">
+   <foreach item='scope' collection="scopeArray">
+      <trim prefix="OR">
+         <choose>
+            <when test="scope == 'T'.toString()">ntc_title LIKE '%'||#{notice_keyword}||'%'</when>
+            <when test="scope == 'C'.toString()">ntc_content LIKE '%'||#{notice_keyword}||'%'</when>
+            <when test="scope == 'V'.toString()">ntc_country LIKE '%'||#{notice_keyword}||'%'</when>
+        <!--     <when test="scope == 'W'.toString()">ntc_writer LIKE '%'||#{notice_keyword}||'%'</when> -->
+         </choose>
+      </trim>
+   </foreach>
+</trim>
+<![CDATA[       
+     	 ROWNUM <= ( #{notice_page_num} * #{notice_amount_per_page} )
+ 				)
+ 		 WHERE rn >= ( ( #{notice_page_num} * #{notice_amount_per_page} ) - ( #{notice_amount_per_page} - 1 ) )
+ ]]>
+ </select>
+
+<!-- 공지글 총 개수 조회(페이징 고려: 삭제 요청 된것 포함) -->
+    <select id="select_notice_rowamoun_total" resultType="long">
+       <![CDATA[
+          		SELECT count(*) totalCnt FROM trip.tbl_notice
+       ]]>
+      <where>
+         <trim prefix="(" suffix=")" prefixOverrides="OR">
+            <foreach item='scope' collection="scopeArray">
+               <trim prefix="OR">
+				<if test="scope == 'T'.toString()"> ntc_title LIKE '%'||#{notice_keyword}||'%'
+               </if>
+               <if test="scope == 'C'.toString()">  ntc_content LIKE '%'||#{notice_keyword}||'%'
+               </if>
+               <if test="scope == 'V'.toString()">  ntc_country LIKE '%'||#{notice_keyword}||'%'
+               </if>
+               </trim>
+            </foreach>
+         </trim>
+      </where>
+    </select>
+
+<!-- 공지사항 글쓰기(등록) 작성자 확인필요-->
+	<insert id="insert_notice">
+		<selectKey keyProperty="ntc_no" order="BEFORE" resultType="int" >
+			SELECT seq_notice.nextval FROM dual
+		</selectKey>
+		INSERT INTO trip.tbl_notice 
+		VALUES ( #{ntc_no}, #{ntc_title}, #{ntc_content}, default, default, #{ntc_writer}, default,  #{ntc_country},#{ntc_continent}, default)
+	</insert>
+
+
+<!-- 특정 공지사항 조회  -->
+<select id="search_notice" resultType="com.spring.tmz.domain.NoticeVO">
+	SELECT * FROM trip.tbl_notice 
+	WHERE ntc_no = #{ntc_no}
+</select>
+
+
+<!-- 공지사항 글 수정 -->
+<update id="update_notice">
+	UPDATE trip.tbl_notice
+	SET ntc_title= #{ntc_title},
+		ntc_content = #{ntc_content},
+		ntc_moddate = default,
+		ntc_country = #{ntc_country},
+		ntc_continent = #{ntc_continent}
+	WHERE ntc_no = #{ntc_no}
+</update>
+
+
+<!-- 공지사항 글 삭제(요청) -->	
+<update id="update_notice_delflag">
+	UPDATE trip.tbl_notice
+	SET ntc_delflag = 1
+	WHERE ntc_no =#{ntc_no}
+</update>
+
+
+<!-- 공지사항 글 실제 삭제 -->	
+<delete id="delete_notice">
+	DELETE trip.tbl_notice
+	WHERE ntc_no =#{ntc_no}
+</delete>
+
+
+<!-- 공지사항 글 실제 삭제(한번에) -->	
+<delete id="delete_all_notice">
+	DELETE trip.tbl_notice
+	WHERE ntc_delflag = 1
+</delete>
+
+
+<!--  -->
+<!-- 공지글 총 개수 조회(페이징시 필요) 삭제요청된거 포함 추후에 다시 볼 것--><!-- 
+<select id="select_notice_row_amount_total" resultType="long">
+
+<![CDATA[
+	SELECT count(*) total_notice_cnt FROM trip.tbl_notice
+]]>
+<where>
+	<trim prefix="(" suffix=")" prefixOverrides="OR">
+		<foreach id="scope" collection="scopeArray" ></foreach>
+	</trim>
+</where>
+
+</select> -->
+
+<!-- DB에서 대륙 가져오기 -->
+<select id="select_notice_continent" resultType="com.spring.tmz.domain.Notice_regionVO">
+	SELECT CONTINENT_NAME, continent_no
+	FROM trip.tbl_continent
+</select>
+
+<!-- DB에서 나라이름 가져오기 -->
+<select id="select_notice_country" resultType="com.spring.tmz.domain.Notice_regionVO">
+ <![CDATA[
+	SELECT country_name
+	from TBL_COUNTRY 
+	WHERE continent_name = #{continent_name}
+]]>
+</select>
+
+
+
+
+
+<!-- 공지사항 좋아요 눌렀을때 -->
+<insert id="insert_notice_like">
+   <selectKey keyProperty="ntc_like_no" resultType="int" order="BEFORE">
+      SELECT SEQ_NOTICE_LIKE.nextval FROM dual
+   </selectKey>
+   INSERT INTO trip.tbl_notice_like
+   VALUES ( #{ntc_like_no}, #{ntc_no}, #{user_id}, 1)
+</insert>
+
+
+<!-- 공지사항 좋아요 취소했을때 -->
+<update id="disable_notice_like">
+	DELETE trip.tbl_notice_like
+	WHERE user_id =#{user_id} and ntc_no = #{ntc_no}
+</update>
+
+
+<!-- 공지사항 좋아요 총 갯수 구하기 select문은 무조건 resultType넣어줘야함!!!-->
+<select id="notice_like_total"  resultType="int"> 
+	SELECT count(*) ntc_like_cnt 
+	FROM trip.tbl_notice_like
+	WHERE ntc_no = #{ntc_no}
+	
+</select>
+
+<!-- 공지사항 좋아요 갯수 업데이트  --><!-- 어디가에선 ntc_like_cnt를 구해야함  -->
+<update id="update_notice_like_check">
+UPDATE trip.tbl_notice
+SET ntc_like_cnt = #{ntc_like_cnt}
+where ntc_no = #{ntc_no}
+</update>
+
+
+<!-- 공지사항 좋아요 누른 사람 누구? -->
+<select id="select_notice_like_user" resultType="com.spring.tmz.domain.Notice_likeVO">
+SELECT * 
+FROM trip.tbl_notice_like
+WHERE ntc_no = #{ntc_no} 
+</select>
+
+
+
+
+
+
+
+
+
+
+</mapper>

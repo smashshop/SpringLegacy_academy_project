@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper	namespace = "com.spring.tmz.mapper.Review_mapper">
+
+	<!--후기 게시글 조회 -->
+   <select id="select_review_list_main" resultType="com.spring.tmz.domain.ReviewVO">
+   <![CDATA[
+       SELECT * 
+       FROM (
+             SELECT * FROM tbl_review ORDER BY rv_replcnt DESC
+            )
+       WHERE rv_no > 0 AND rv_delflag = 0 AND ROWNUM <= 2
+   ]]>
+    </select>
+
+	
+	<!--후기 게시글 조회 --><!-- 
+	<select id="select_review_list" resultType="com.spring.tmz.domain.ReviewVO">
+		 SELECT * FROM trip.tbl_review
+		 WHERE rv_no > 0 AND rv_delflag = 0
+		 ORDER BY rv_no DESC
+	 </select> -->
+
+	 	<!-- 게시물 조회 - 목록2: 페이징 고려: 삭제 요청 된 행 포함 -->
+	 <select id="select_review_list" resultType="com.spring.tmz.domain.ReviewVO">
+	 <![CDATA[
+	 SELECT RV_NO, RV_TITLE, RV_CONTENT, RV_REGDATE, RV_MODDATE, RV_WRITER, RV_REPLCNT, RV_DELFLAG,rv_continent,rv_country
+	 FROM ( SELECT /*+ INDEX_DESC (a PK_REVIEW_RV_NO) */ ROWNUM rn, a.*
+	 FROM trip.tbl_review a
+	 WHERE 
+	 ]]>
+	<trim prefix="(" suffix=") AND" prefixOverrides="OR">
+		<foreach item='scope' collection="scopeArray">
+			<trim prefix="OR">
+				<!-- <choose>
+					<when test="scope == 'T'.toString()">rv_title LIKE '%'||#{review_keyword}||'%'</when>
+					<when test="scope == 'C'.toString()">rv_content LIKE '%'||#{review_keyword}||'%'</when>
+					<when test="scope == 'W'.toString()">rv_writer LIKE '%'||#{review_keyword}||'%'</when>
+				</choose> -->	
+					<if test="scope == 'T'.toString()">
+		           		 rv_title LIKE '%'||#{review_keyword}||'%'
+		         </if>
+		         <if test="scope == 'C'.toString()">
+		            	rv_content LIKE '%'||#{review_keyword}||'%'
+		         </if>
+		         <if test="scope == 'W'.toString()">
+		            	rv_writer LIKE '%'||#{review_keyword}||'%'
+		         </if>
+		         <if test="scope == 'V'.toString()">
+		            	rv_country LIKE '%'||#{review_keyword}||'%'
+		         </if>
+			</trim>
+		</foreach>
+	</trim>
+	<![CDATA[ 		
+	 		ROWNUM <= ( #{review_page_num} * #{review_page_row_amount_per_page} )
+	 )
+	 WHERE rn >= ( ( #{review_page_num} * #{review_page_row_amount_per_page} ) - ( #{review_page_row_amount_per_page} - 1 ) )
+	 ]]>
+	 </select>
+ <!-- 후기 게시물 등록 -->
+	 <insert id="insert_review_board">
+		 <selectKey keyProperty="rv_no" resultType="int" order="BEFORE">
+		 	SELECT seq_review.nextval FROM dual
+		 </selectKey>
+	 	INSERT INTO trip.tbl_review
+	 	VALUES (#{rv_no},#{rv_title}, #{rv_content},DEFAULT, DEFAULT, #{rv_writer}, DEFAULT, DEFAULT,#{rv_continent},#{rv_country},default)
+	 </insert>
+
+<!-- 특정 게시물 조회 -->
+	 <select id="search_review_board" resultType="com.spring.tmz.domain.ReviewVO">
+	 SELECT * FROM trip.tbl_review
+	 WHERE rv_no = #{rv_no} <!-- AND bDelFlag = 0 -->
+	 </select>
+	 
+	 <!-- 특정 게시물 수정 -->
+	 <update id="update_review_board">
+	 UPDATE trip.tbl_review
+	 SET rv_no = #{rv_no},
+	 rv_title = #{rv_title},
+	 rv_content = #{rv_content},
+	 rv_continent=#{rv_continent},
+	 rv_country=#{rv_country}
+	 WHERE rv_no = #{rv_no}
+	 </update>
+	 
+	 <!-- 특정 게시물 삭제 요청 - 해당 글의 bdelFlag을 1로 수정 -->
+	 <update id="update_review_delflag">
+	 UPDATE trip.tbl_review
+	 SET RV_DELFLAG = 1
+	 WHERE rv_no = #{rv_no}
+	</update>
+	
+	<!-- 특정 게시물 삭제 - 실제 삭제 -->
+	 <delete id="delete_review_board">
+		 DELETE trip.tbl_review WHERE RV_NO = #{rv_no} <!-- AND bDelFlag = 1 -->
+	 </delete>
+	 
+	 <!-- 게시물 삭제 – 삭제 요청된 전체 게시물들 삭제 -->
+	 <delete id="delete_all_review_board_set_deleted">
+		 DELETE trip.tbl_review WHERE RV_DELFLAG = 1
+	 </delete>
+	 
+	 
+	  <!-- 게시물 총 개수 조회(페이징): 삭제 요청된 행 포함 -->
+	 <select id="select_review_row_amount_total" resultType="long">
+		 <![CDATA[
+		 	SELECT count(*) total_review_cnt FROM trip.tbl_review
+		 ]]>
+		 <where>
+			<trim prefix="(" suffix=")" prefixOverrides="OR">
+				<foreach item='scope' collection="scopeArray">
+					<trim prefix="OR">
+					
+							<if test="scope == 'T'.toString()">RV_TITLE LIKE '%'||#{review_keyword}||'%'</if>
+							<if test="scope == 'C'.toString()">RV_CONTENT LIKE '%'||#{review_keyword}||'%'</if>
+							<if test="scope == 'V'.toString()"> RV_COUNTRY LIKE '%'||#{review_keyword}||'%'</if>
+						
+					</trim>
+				</foreach>
+			</trim>
+		</where> 
+	 </select>
+	 
+	 <!-- 게시물의 댓글 개수 수정: 댓글추가 시에 #{amount}에 1, 댓글삭제 시 #{amount}에 -1 이 각각 전달됨 -->
+	 <update id="update_rv_reply_cnt">
+		 UPDATE trip.tbl_review
+		 SET RV_REPLCNT = RV_REPLCNT + #{amount}
+		 WHERE rv_no = #{rv_no} AND RV_DELFLAG = 0
+	 </update>
+	 <!--나라이름 가져오기  -->
+	 <select id="select_review_country" resultType="com.spring.tmz.domain.Review_regionVO">
+	 select COUNTRY_NAME
+		from trip.tbl_country
+		where continent_name=#{continent_name}
+	 </select>
+	 <!--대륙이름 가져오기  -->
+	 <select id="select_review_continent" resultType="com.spring.tmz.domain.Review_regionVO">
+	 select continent_name,continent_no
+	 from trip.tbl_continent
+	 </select>
+	 <!--좋아요 하트 버튼을 눌렀을 때  -->
+	 <insert id="insert_review_like">
+		 <selectKey keyProperty="rv_like_no" resultType="int" order="BEFORE">
+		 	SELECT SEQ_NOTICE_LIKE.nextval FROM dual
+		 </selectKey>
+	 	INSERT INTO trip.tbl_review_like
+	 	VALUES (#{rv_like_no},#{rv_no}, #{user_id},1)
+	 </insert>
+	 <!-- 좋아요 하트버튼을 취소했을 때  -->
+	 <delete id="disable_rv_like_check">
+		 delete trip.tbl_review_like
+		 WHERE user_id = #{user_id} and rv_no = #{rv_no}
+	 </delete>
+	 <!--특정 게시물의 좋아요 총 갯수 구하기  -->
+	 <select id="review_like_total" resultType="int">
+	 	SELECT count(*) rv_like_cnt FROM trip.tbl_review_like
+	 	where rv_no=#{rv_no}
+	 </select>
+	 <!--게시물의 좋아요 갯수 업데이트  --><!-- 어딘가에서 rv_like_cnt값을 구해야 함 -->
+	 <update id="update_rv_like_check">
+		 UPDATE trip.tbl_review
+		 SET RV_LIKE_CNT = #{rv_like_cnt}
+		 WHERE rv_no = #{rv_no}
+	 </update>
+	 <!-- 좋아요 누른 멤버 구하기  -->
+	 <select id="select_review_like_member" resultType="com.spring.tmz.domain.Review_likeVO">
+	 	select *
+	 	from trip.tbl_review_like
+	 	where rv_no=#{rv_no}
+	 </select>
+	 
+</mapper>

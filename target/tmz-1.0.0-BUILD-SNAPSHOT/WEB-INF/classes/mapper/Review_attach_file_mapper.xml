@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+ "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- MapperInterface 사용 -->
+<mapper namespace="com.spring.tmz.mapper.Review_attach_file_mapper">
+
+	<!--첨부파일 추가 -->
+	<insert id="insert_review_attach_file">
+		 <![CDATA[
+			 INSERT INTO trip.tbl_review_file
+			 VALUES ( #{ruuid}, #{ruploadpath}, #{rfilename}, #{rfiletype},#{rv_no})
+		 ]]>
+	</insert>
+
+	<!-- 특정 게시물의 모든 첨부파일 조회 -->
+	<!-- 서버의 첨부파일 기본저장 경로는 리터럴 문자열로 처리 -->
+	<select id="select_review_attach_files_by_rv_no"
+		resultType="com.spring.tmz.domain.Review_attach_fileVO">
+		 <![CDATA[
+		 SELECT RUUID, RUPLOADPATH, RFILENAME, RFILETYPE, RV_NO 
+		 FROM trip.tbl_review_file 
+		 WHERE RV_NO = #{rv_no}
+		 ]]>
+	</select>
+	<!--특정 첨부파일 삭제 -->
+	<delete id="delete_review_attach_file">
+	 <![CDATA[
+	 	DELETE FROM trip.tbl_review_file WHERE RUUID = #{ruuid}
+	 ]]>
+		</delete>
+		
+	<!-- 특정 게시물의 모든 첨부파일 삭제 -->
+	<delete id="delete_review_attach_files_by_rv_no">
+	 <![CDATA[
+		 DELETE FROM trip.tbl_review_file WHERE rv_no = #{rv_no}
+	 ]]>
+	</delete>
+	
+	<!-- 하루 전의 첨부파일 정보 조회 -->
+	 <select id="select_review_attach_files_before_one_day" resultType="com.spring.tmz.domain.Review_attach_fileVO">
+		 <![CDATA[
+			 SELECT * FROM trip.tbl_review_file
+			 WHERE RUPLOADPATH = TO_CHAR(sysdate -1 ,'yyyy\mm\dd')
+		 ]]>
+	 </select>
+
+
+</mapper>

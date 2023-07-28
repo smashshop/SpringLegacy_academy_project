@@ -1,0 +1,460 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper	namespace = "com.spring.tmz.mapper.Userinfo_mapper">
+
+	<update id = "insert_role">
+ 		update trip.tbl_user_auth
+ 		SET user_id = #{user_id}, role_name = #{role_name}
+ 		WHERE user_id = #{user_id}
+ 	</update>
+ 	
+ 	<update id = "report_role">
+		update TBL_USERINFO
+		SET user_id = #{user_id}, ENABLED = 0
+		WHERE user_id = #{user_id} and USER_REPORT >= 1
+ 	</update>
+
+	<select id = "select_userinfo_frnd" resultType = "com.spring.tmz.domain.UserinfoVO">
+		SELECT us.user_id, us.user_pw, us.user_name, NVL(ra.rate_num, 0) AS user_rate, us.user_birth, us.user_regdate, us.user_tag, us.user_rate, us.user_delflag, us.enabled, us.user_email
+		FROM tbl_userinfo us LEFT OUTER JOIN(
+        	SELECT  rated_id, (SUM(RATE_NUM)/COUNT(*)) AS rate_num
+        	FROM tbl_userinfo_rate
+        	GROUP BY rated_id
+    	)ra ON us.user_id = ra.rated_id
+    	WHERE user_id = #{user_id}
+	</select>
+	
+	<select id = "select_userinfo_list" resultType="com.spring.tmz.domain.UserinfoVO">
+		SELECT * FROM trip.tbl_userinfo WHERE user_id = #{user_id} AND user_pw = #{user_pw}
+	</select>
+	
+	
+	<resultMap id="authority_map" type="com.spring.tmz.domain.AuthorityVO" >
+		<result property="user_id" column="user_id"/>
+		<result property="role_name" column="role_name"/>
+	</resultMap>
+	
+	<resultMap id="userinfo_map" type="com.spring.tmz.domain.UserinfoVO">
+		<result property="user_id" column="user_id"/>
+		<result property="user_pw" column="user_pw"/>
+		<result property="user_name" column="user_name"/>
+		<result property="user_birth" column="user_birth"/>
+		<result property="user_regdate" column="user_regdate"/>
+		<result property="user_tag" column="user_tag"/>
+		<result property="user_rate" column="user_rate"/>
+		<result property="user_delflag" column="user_delflag"/>
+		<result property="enabled" column="enabled"/>
+		
+		<collection property="authority_list" resultMap="authority_map"/>
+	</resultMap>
+ 
+ 
+	
+	<insert id="insert_userinfo" parameterType="com.spring.tmz.domain.UserinfoVO">
+      INSERT INTO trip.tbl_userinfo
+      VALUES(#{user_id}, #{user_pw}, #{user_name}, #{user_birth}, DEFAULT, #{user_tag}, DEFAULT, DEFAULT, DEFAULT, #{user_email}, DEFAULT) 
+    </insert>
+    
+    <select id="select_userinfo_idChk" resultType="com.spring.tmz.domain.UserinfoVO">
+      SELECT * FROM trip.tbl_userinfo WHERE user_id = #{user_id}
+   </select>
+	
+	<!-- 회원 권한 추가 -->
+	<insert id="insert_user_authority">
+		INSERT INTO trip.tbl_user_auth
+		VALUES(#{user_id}, 'ROLE_USER') <!-- #{role_name} -->
+	</insert>
+	
+	<!-- 권한 포함 특정 회원 조회 -->
+	<select id="select_userinfo" resultMap="userinfo_map">
+		SELECT info.user_id, info.user_pw, info.user_name, info.user_birth, info.user_regdate, info.user_tag,
+       		   info.user_rate, info.user_delflag, info.enabled, auth.role_name 
+		FROM trip.tbl_userinfo info INNER JOIN trip.tbl_user_auth auth ON info.user_id = auth.user_id
+		WHERE info.user_id = #{user_id}
+	</select>
+	
+	
+	
+	
+	
+	<!-- 게시물 목록 : 페이징 후 --> 
+ 	 <select id="selectUserList" resultType="com.spring.tmz.domain.UserinfoVO">
+ 	 	<include refid="com.spring.tmz.mapper.Common_mapper.pagingHeader" /> <!-- 페이징 처리시 호출 --> 
+ 		<include refid="userSearchInfo" />
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.pagingFooter" /> <!-- 페이징 처리시 호출 --> 
+ 	</select>
+ 	<sql id="userSearchInfo">
+ 		select user_id, user_pw, user_name, user_birth, user_regdate, user_tag, user_rate, user_delflag, enabled, user_email
+      		from trip.tbl_userinfo a
+       		where 1=1
+       		<if test='scope=="I"'>
+       		AND user_id LIKE '%'||#{keyword}||'%'
+       		</if>
+       		<if test='scope=="N"'>
+       		AND user_name LIKE '%'||#{keyword}||'%'
+       		</if>
+       		<if test="userDelflag != null and userDelflag !=''">
+       		AND user_delflag=#{userDelflag}
+       		</if>
+       		<if test="enabled !=null and enabled !=''">
+       		AND enabled=#{enabled}
+       		</if>
+ 	</sql>
+ 	<select id="searchUserCnt" resultType="int">
+ 		SELECT COUNT(*) FROM (
+ 		<include refid="userSearchInfo" />
+ 		)
+ 	</select>
+ 	 <!-- 게시물의 총 수를 반환하는 select 문  -->
+ 	<select id="selectBoardTotCnt" resultType="Long">
+
+ 		select count(*)
+      		from trip.tbl_userinfo a<if test ="searchFlag='all'">
+      		inner join tbl_user_auth b
+	on (a.user_id = b.user_id)
+      		</if>
+       		where 1=1
+			<if test="userDelflag != null and userDelflag !=''">
+       		AND user_delflag=#{userDelflag}
+       		</if>
+       		<if test="enabled !=null and enabled !=''">
+       		AND enabled=#{enabled}
+       		</if>
+
+ 	</select>
+ 	
+ 	
+ 		<!-- 게시물 목록 : 페이징 후 --> 
+ 	 <select id="deleteUserList" resultType="com.spring.tmz.domain.UserinfoVO">
+ 	 	<include refid="com.spring.tmz.mapper.Common_mapper.pagingHeader" /> <!-- 페이징 처리시 호출 --> 
+ 		<include refid="userSearchInfo_delete" />
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.pagingFooter" /> <!-- 페이징 처리시 호출 --> 
+ 	</select>
+ 	<sql id="userSearchInfo_delete">
+		select user_id, user_name, user_name, user_birth, user_regdate, user_tag, user_rate, user_delflag, enabled, user_email
+      	from trip.tbl_userinfo a
+ 	</sql>
+ 	
+ 	
+ 	
+ 	<!-- 일간 통계 -->
+ 	
+	 	<select id="select_day_visit_cnt" resultType="com.spring.tmz.domain.StatisticsVO">  
+ 		<![CDATA[
+			SELECT TO_CHAR(TO_DATE(b.dt,'YYYYMMDD'),'YYYY-MM-DD') AS USER_REGDATE
+			 , NVL(SUM(a.cnt), 0) cnt
+			FROM ( SELECT TO_CHAR(USER_REGDATE,'YYYYMMDD') as USER_REGDATE, COUNT(*) cnt
+			       FROM tbl_userinfo
+			       WHERE TO_CHAR(USER_REGDATE,'YYYYMMDD') BETWEEN TO_CHAR(SYSDATE-8,'YYYYMMDD')
+			                                            AND TO_CHAR(SYSDATE,'YYYYMMDD')
+			       GROUP BY TO_CHAR(USER_REGDATE,'YYYYMMDD')
+			       ORDER BY 1 ASC
+			    ) a
+			  , (  SELECT TO_CHAR(SYSDATE-8,'YYYYMMDD') + LEVEL AS dt
+			       FROM dual 
+			       CONNECT BY LEVEL <= (TO_CHAR(SYSDATE,'YYYYMMDD') - TO_CHAR(SYSDATE-8,'YYYYMMDD')) --시작일자
+			    ) b
+			WHERE b.dt = a.USER_REGDATE(+)
+			GROUP BY b.dt
+			ORDER BY b.dt
+			
+ 		]]>
+ 	</select>
+ 	
+ 	
+ 	
+ 	    <!-- 주간 통계  -->
+ 	 <select id="selectWeekVisitCnt" resultType="long">
+ 		<![CDATA[
+ 			SELECT count(*) FROM trip.tbl_userinfo WHERE USER_REGDATE BETWEEN TO_CHAR(sysdate-6, 'YYYY/MM/DD')
+            AND TO_CHAR(sysdate+1, 'YYYY/MM/DD')
+			
+ 		]]>
+ 	</select>
+ 	
+
+ 	
+ 	 <select id="selectWeekVisitCnt2" resultType="long">
+ 		<![CDATA[
+ 			SELECT count(*) FROM trip.tbl_userinfo WHERE USER_REGDATE BETWEEN TO_CHAR(sysdate-14)
+            AND TO_CHAR(sysdate-7)
+			
+ 		]]>
+ 	</select>
+ 	
+ 	<select id="selectWeekVisitCnt3" resultType="long">
+ 		<![CDATA[
+ 			SELECT count(*) FROM trip.tbl_userinfo WHERE USER_REGDATE BETWEEN TO_CHAR(sysdate-22)
+            AND TO_CHAR(sysdate-15)
+			
+ 		]]>
+ 	</select>
+ 	
+ 	<select id="selectWeekVisitCnt4" resultType="long">
+ 		<![CDATA[
+ 			SELECT count(*) FROM trip.tbl_userinfo WHERE USER_REGDATE BETWEEN TO_CHAR(sysdate-30)
+            AND TO_CHAR(sysdate-23)
+			
+ 		]]>
+ 	</select>
+ 	
+ 	
+ 	
+ 	<!-- 월간 통계 -->
+ 	
+ 	<select id="select_month_visit_cnt1" resultType="com.spring.tmz.domain.StatisticsVO">  
+ 		<![CDATA[
+ 			SELECT
+    M01,M02,M03,M04,M05,M06,M07,M08,M09,M10,M11,M12
+	FROM (
+          SELECT
+            SUM(DECODE(SUBSTR(USER_REGDATE,4,2),'01',1,0)) AS  M01,
+            SUM(DECODE(SUBSTR(USER_REGDATE,4,2),'02',1,0)) AS  M02, 
+            SUM(DECODE(SUBSTR(USER_REGDATE,4,2),'03',1,0)) AS  M03,
+            SUM(DECODE(SUBSTR(USER_REGDATE,4,2),'04',1,0)) AS  M04,
+            SUM(DECODE(SUBSTR(USER_REGDATE,4,2),'05',1,0)) AS  M05,
+            SUM(DECODE(SUBSTR(USER_REGDATE,4,2),'06',1,0)) AS  M06,
+            SUM(DECODE(SUBSTR(USER_REGDATE,4,2),'07',1,0)) AS  M07,
+            SUM(DECODE(SUBSTR(USER_REGDATE,4,2),'08',1,0)) AS  M08,
+            SUM(DECODE(SUBSTR(USER_REGDATE,4,2),'09',1,0)) AS  M09,
+            SUM(DECODE(SUBSTR(USER_REGDATE,4,2),'10',1,0)) AS  M10,
+            SUM(DECODE(SUBSTR(USER_REGDATE,4,2),'11',1,0)) AS  M11,
+            SUM(DECODE(SUBSTR(USER_REGDATE,4,2),'12',1,0)) AS  M12
+           
+          FROM trip.tbl_userinfo A
+          WHERE A.USER_REGDATE BETWEEN '20220101' AND '20221231'
+        )
+			
+ 		]]>
+ 	</select>
+ 	
+ 	<!-- 연간 통계 -->
+ 	 <select id="select_Year_Visit_Cnt1" resultType="int">
+ 		<![CDATA[
+ 		SELECT count(*) FROM trip.tbl_userinfo WHERE USER_REGDATE BETWEEN TO_DATE('2018/01/01' , 'YYYY/MM/DD')
+        AND TO_DATE('2018/12/31' , 'YYYY/MM/DD')
+ 		]]>
+ 	</select>
+ 	
+ 	 <select id="select_Year_Visit_Cnt2" resultType="int">
+ 		<![CDATA[
+ 		SELECT count(*) FROM trip.tbl_userinfo WHERE USER_REGDATE BETWEEN TO_DATE('2019/01/01' , 'YYYY/MM/DD')
+        AND TO_DATE('2019/12/31' , 'YYYY/MM/DD')
+ 		]]>
+ 	</select>
+ 	
+ 	 <select id="select_Year_Visit_Cnt3" resultType="int">
+ 		<![CDATA[
+ 		SELECT count(*) FROM trip.tbl_userinfo WHERE USER_REGDATE BETWEEN TO_DATE('2020/01/01' , 'YYYY/MM/DD')
+        AND TO_DATE('2020/12/31' , 'YYYY/MM/DD')
+ 		]]>
+ 	</select>
+
+ 	 <select id="select_Year_Visit_Cnt4" resultType="int">
+ 		<![CDATA[
+ 		SELECT count(*) FROM trip.tbl_userinfo WHERE USER_REGDATE BETWEEN TO_DATE('2021/01/01' , 'YYYY/MM/DD')
+        AND TO_DATE('2021/12/31' , 'YYYY/MM/DD')
+ 		]]>
+ 	</select>
+
+ 	 <select id="select_Year_Visit_Cnt5" resultType="int">
+ 		<![CDATA[
+ 		SELECT count(*) FROM trip.tbl_userinfo WHERE USER_REGDATE BETWEEN TO_DATE('2022/01/01' , 'YYYY/MM/DD')
+        AND TO_DATE('2022/12/31' , 'YYYY/MM/DD')
+ 		]]>
+ 	</select>
+ 	
+ 	
+ 	
+ 	
+ 	
+ 	<!-- 동행 권한 정보 --> <!-- 페이징 체크필요! -->
+ 	
+ 	
+ 	<select id="select_authority" resultType="com.spring.tmz.domain.AuthorityVO">
+ 	select * from TBL_AUTH_NAME
+ 	</select>
+ 	
+ 	
+ 	
+ 	
+ 	
+ 	
+ 	<select id="select_user_authority" resultType="com.spring.tmz.domain.UserinfoVO">
+ 	<include refid="com.spring.tmz.mapper.Common_mapper.pagingHeader" /> <!-- 페이징 처리시 호출 --> 
+ 		<include refid="userSearchInfo2" />
+ 	<include refid="com.spring.tmz.mapper.Common_mapper.pagingFooter" /> <!-- 페이징 처리시 호출 --> 
+ 	</select>
+ 	
+ 	<sql id="userSearchInfo2">
+ 	select a.user_id, a.user_name, a.user_email, a.user_regdate, a.user_rate, b.role_name, a.USER_REPORT, a.enabled
+	from tbl_userinfo a inner join tbl_user_auth b
+	on (a.user_id = b.user_id)
+	where 1=1
+	
+	
+		<if test='scope=="I"'>
+		AND a.user_id LIKE '%'||#{keyword}||'%'
+		</if>
+		<if test='scope=="N"'>
+		AND a.user_name LIKE '%'||#{keyword}||'%'
+		</if>
+		<if test="userDelflag != null and userDelflag !=''">
+		AND user_delflag=#{userDelflag}
+		</if>
+		<if test="enabled !=null and enabled !=''">
+       	AND enabled=#{enabled}
+       	</if>
+	<!-- 	<if test="enabled !=null and enabled !=''">
+		AND enabled=#{enabled}
+		</if> -->
+	</sql>	
+ 	
+ 	
+ 	<!-- 동행 순위 -->
+
+ 	 <select id="select_friend_cnt" resultType="com.spring.tmz.domain.StatisticsVO">  
+		SELECT a.FREPL_WRITER, b.USER_NAME, a.FREPL_CONFIRM_SUM
+		FROM (SELECT FREPL_WRITER, COUNT(*) as FREPL_CONFIRM_SUM FROM TBL_FRIEND_REPL 
+		                        where FREPL_CONFIRM = 1 
+		                        GROUP BY FREPL_WRITER
+		                        ORDER BY FREPL_CONFIRM_SUM DESC) a
+		inner join TBL_USERINFO b
+		on (a.FREPL_WRITER = b.USER_ID)
+		where 1=1
+		and b.user_delflag = 0 and b.ENABLED = 1
+ 	</select>
+ 
+
+ 	
+ 	<!-- 대륙별 통계 -->
+ 	
+ 	
+ 
+ 	
+ 	
+ 	<select id="select_continent_east_asia" resultType="int">
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_header" />
+ 		'동아시아'
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_footer" />
+ 	</select>
+ 	
+ 	<select id="select_continent_southeast_asia" resultType="int">
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_header" />
+ 		'동남아시아'
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_footer" />
+ 	</select>
+ 	
+ 	<select id="select_continent_southwest_asia" resultType="int">
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_header" />
+ 		'서남아시아'
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_footer" />
+ 	</select>
+ 	
+ 	<select id="select_continent_europe" resultType="int">
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_header" />
+ 		'유럽'
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_footer" />
+ 	</select>
+ 	
+ 	<select id="select_continent_america" resultType="int">
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_header" />
+ 		'아메리카'
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_footer" />
+ 	</select>
+ 	
+ 	<select id="select_continent_oceania" resultType="int">
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_header" />
+ 		'오세아니아'
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_footer" />
+ 	</select>
+ 	
+ 	<select id="select_continent_africa" resultType="int">
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_header" />
+ 		'아프리카'
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_footer" />
+ 	</select>
+ 	
+
+ 	
+ 	<!-- 대륙별 통계(모집 완료) -->
+ 	
+ 	
+ 	<select id="select_continent_east_asia2" resultType="int">
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_header" />
+ 		'동아시아'
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_footer2" />
+ 	</select>
+ 	
+ 	<select id="select_continent_southeast_asia2" resultType="int">
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_header" />
+ 		'동남아시아'
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_footer2" />
+ 	</select>
+ 	
+ 	<select id="select_continent_southwest_asia2" resultType="int">
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_header" />
+ 		'서남아시아'
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_footer2" />
+ 	</select>
+ 	
+ 	<select id="select_continent_europe2" resultType="int">
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_header" />
+ 		'유럽'
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_footer2" />
+ 	</select>
+ 	
+ 	<select id="select_continent_america2" resultType="int">
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_header" />
+ 		'아메리카'
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_footer2" />
+ 	</select>
+ 	
+ 	<select id="select_continent_oceania2" resultType="int">
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_header" />
+ 		'오세아니아'
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_footer2" />
+ 	</select>
+ 	
+ 	<select id="select_continent_africa2" resultType="int">
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_header" />
+ 		'아프리카'
+ 		<include refid="com.spring.tmz.mapper.Common_mapper.select_continent_footer2" />
+ 	</select>
+ 	
+
+ 	
+ 	
+ 	<!-- 나라별 통계 -->
+ 	
+ 	<select id="selectContryStat" parameterType="map" resultType="map">
+		SELECT B.COUNTRY_NAME FRND_COUNTRY,TO_CHAR(COUNT(A.FRND_COUNTRY)) FRND_COUNTRY_CNT FROM TBL_FRIEND A,TBL_COUNTRY B
+		WHERE 1=1
+		AND A.FRND_COUNTRY(+)=B.COUNTRY_NAME
+		AND B.CONTINENT_NO=#{conno}
+        AND A.FRND_STATUS(+)=#{yn}
+		GROUP BY B.COUNTRY_NAME
+ 	</select>
+ 	
+ 	
+ 	<!-- 평점 관리 -->
+
+	<select id="select_rate_list" resultType="com.spring.tmz.domain.UserinfoVO">
+		select a.RATING_ID, a.RATED_ID, a.RATE_NUM, a.PARTY_COMMENT, b.FRND_TITLE, b.FRND_COUNTRY, b.FRND_STARTDATE, b.FRND_ENDDATE
+		from TBL_USERINFO_RATE a inner join TBL_FRIEND b
+		on (a.FRND_NO = b.FRND_NO)
+		where 1=1 
+		AND FRND_DELFLAG=0 AND FRND_STATUS=1
+   </select>
+	
+	<!-- 아이디 찾기 ifnull(user_id, 0) / 최예나-->
+ 	<select id="select_user_id" resultType="String"> 
+ 		select user_id 
+ 		from trip.tbl_userinfo 
+ 		where user_email = #{user_email} and user_name = #{user_name}
+ 	</select>
+ 	
+ 	<!-- 비밀번호 찾기 -->
+	
+</mapper>

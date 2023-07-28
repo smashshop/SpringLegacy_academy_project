@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+ "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.spring.tmz.mapper.Review_reply_mapper">
+	<!-- 1. 특정 게시물에 대한 댓글 등록 -->
+	<insert id="insert_review_reply_for_board">
+		<selectKey keyProperty="rrepl_no" order="BEFORE"
+			resultType="long">
+			SELECT trip.seq_review_repl.NEXTVAL FROM dual
+		</selectKey>
+		INSERT INTO trip.tbl_review_repl(rv_no, rrepl_content, rrepl_writer, rrepl_regdate, rrepl_moddate,
+		rrepl_no, rrepl_pno)
+		VALUES (#{rv_no}, #{rrepl_content}, #{rrepl_writer}, DEFAULT, DEFAULT, #{rrepl_no}, DEFAULT)
+	</insert>
+	<!-- 2. 댓글에 대한 답글 등록 -->
+	<insert id="insert_review_reply_for_reply">
+		<selectKey keyProperty="rrepl_no" order="BEFORE"
+			resultType="long">
+			SELECT trip.seq_review_repl.NEXTVAL FROM dual
+		</selectKey>
+		INSERT INTO trip.tbl_review_repl(rv_no, rrepl_content, rrepl_writer, rrepl_regdate, rrepl_moddate,
+		rrepl_no, rrepl_pno)
+		VALUES (#{rv_no}, #{rrepl_content}, #{rrepl_writer}, DEFAULT, DEFAULT, #{rrepl_no}, #{rrepl_pno})
+	</insert>
+	<!-- 3. 특정 게시물에 대한 특정 댓글/답글 조회 -->
+	<select id="select_review_reply"
+		resultType="com.spring.tmz.domain.Review_replyVO">
+		 <![CDATA[
+		 SELECT * FROM trip.tbl_review_repl WHERE rv_no= #{rv_no} AND rrepl_no = #{rrepl_no}
+		 ]]>
+	</select>
+	<!-- 4. 특정 게시물에 대한 특정 댓글/답글 수정 -->
+	<update id="update_review_reply">
+		 <![CDATA[
+		 UPDATE trip.tbl_review_repl
+		 SET rrepl_content = #{rrepl_content},
+		 rrepl_moddate = DEFAULT
+		 WHERE rv_no= #{rv_no} AND rrepl_no = #{rrepl_no}
+		 ]]>
+	</update>
+	<!-- 5. 특정 게시물에 대한 특정 댓글/답글 삭제 -->
+	<delete id="delete_review_reply">
+		 <![CDATA[
+		 DELETE FROM trip.tbl_review_repl WHERE rv_no= #{rv_no} AND rrepl_no = #{rrepl_no}
+		 ]]>
+	</delete>
+	<!-- 6. 댓글 목록 - 계층 쿼리 (페이징) -->
+	 <select id="select_review_reply_list" resultType="com.spring.tmz.domain.Review_replyVO">
+	 <![CDATA[
+		 SELECT rv_no, rrepl_content, rrepl_writer, rrepl_regdate, rrepl_moddate, rrepl_no, rrepl_pno, rrepl_lvl
+		 FROM ( SELECT ROWNUM rn, b.*
+		 	FROM ( SELECT LEVEL rrepl_lvl, a.*
+		 		FROM ( SELECT /*+ INDEX_ASC (a idx_review_repl_rv_no_rrepl_no) */ *
+		 			FROM trip.tbl_review_repl
+					WHERE rv_no = #{review_reply_pagingDTO.rv_no}
+					) a
+			 START WITH rrepl_pno IS NULL
+			 CONNECT BY PRIOR rrepl_no = rrepl_pno
+		 ) b
+	 )
+	 WHERE rn BETWEEN #{review_reply_pagingDTO.review_reply_page_num} * #{review_reply_pagingDTO.review_reply_row_amount_per_page}
+					 - (#{review_reply_pagingDTO.review_reply_row_amount_per_page} - 1) 
+			 AND #{review_reply_pagingDTO.review_reply_page_num} * #{review_reply_pagingDTO.review_reply_row_amount_per_page}
+	 ]]>
+ 	</select>
+	<!--7. 특정 게시물의 댓글 총 개수확인 -->
+	 <select id="select_reply_total_by_rv_no" resultType="int">
+	 <![CDATA[
+		 SELECT /*+ INDEX (tbl_review_repl idx_review_repl_rv_no_rrepl_no) */ count(*)
+		 FROM trip.tbl_review_repl
+		 WHERE rv_no = #{review_reply_pagingDTO.rv_no}
+	 ]]>
+	 </select>
+
+
+
+
+
+
+
+
+</mapper>

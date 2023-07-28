@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mybatis-spring="http://mybatis.org/schema/mybatis-spring"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://mybatis.org/schema/mybatis-spring http://mybatis.org/schema/mybatis-spring.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd">
+		
+	<!-- 스프링 트랜잭션 기능 활성화 -->
+	<tx:annotation-driven/>
+		
+		
+	<!-- 방법1 직접 JDBC 정보를 입력 -->
+	<bean id = "hikariConfig" class = "com.zaxxer.hikari.HikariConfig"><!-- 
+		<property name="driverClassName" value = "oracle.jdbc.OracleDriver"/>
+		<property name="jdbcUrl" value = "jdbc:oracle:thin:@localhost:1521:xe"/> -->
+		<!-- SQL로그 확인용 -->
+		<property name="driverClassName" value = "net.sf.log4jdbc.sql.jdbcapi.DriverSpy"/>
+		<property name="jdbcUrl" value = "jdbc:log4jdbc:oracle:thin:@localhost:1521:xe"/>
+		<property name="username" value = "trip"/>
+		<property name="password" value = "oracle4U"/>
+	</bean>
+	
+	<bean id = "dataSource" class = "com.zaxxer.hikari.HikariDataSource" destroy-method = "close">
+		<constructor-arg ref = "hikariConfig"/>
+	</bean>
+	
+	<bean id = "sqlSessionFactory" class = "org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref = "dataSource"/>
+		
+        <property name="mapperLocations">
+            <list>
+                <value>classpath:mapper/Userinfo_mapper.xml</value>
+                <value>classpath:mapper/Friend_mapper.xml</value>
+                <value>classpath:mapper/Friend_file_mapper.xml</value>
+                <value>classpath:mapper/Country_mapper.xml</value>
+                <value>classpath:mapper/Friend_repl_mapper.xml</value>
+                <value>classpath:mapper/Continent_mapper.xml</value>
+                <value>classpath:mapper/Review_mapper.xml</value>
+                <value>classpath:mapper/Review_attach_file_mapper.xml</value>
+                <value>classpath:mapper/Review_reply_mapper.xml</value>
+                <value>classpath:mapper/Notice_mapper.xml</value>
+                <value>classpath:mapper/Notice_file_mapper.xml</value>
+                <value>classpath:mapper/Mypage_mapper.xml</value>
+                <value>classpath:mapper/Common_mapper.xml</value>
+            </list>
+        </property>
+	</bean>
+	
+	
+	<bean id = "sqlSession" class = "org.mybatis.spring.SqlSessionTemplate">
+		<constructor-arg index = "0" ref = "sqlSessionFactory"/>
+	</bean>
+	
+	
+	<!-- Spring Transaction 관리자 빈(dataSource빈을 주입받음) -->
+	<bean id = "transactionManager" class = "org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref = "dataSource"/>
+	</bean>
+	
+	
+	<!-- 매퍼인터페이스 빈 자동 생성  -->
+	<mybatis-spring:scan base-package="com.spring.tmz.mapper"/>
+</beans>

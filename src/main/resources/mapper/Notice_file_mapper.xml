@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+ "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- MapperInterface 사용 -->
+<mapper namespace="com.spring.tmz.mapper.Notice_file_mapper">
+
+
+<!-- 공지사항 첨부파일 추가 -->
+   <insert id="insert_notice_file">
+       <![CDATA[
+          INSERT INTO trip.tbl_notice_file
+          VALUES ( #{nfilename}, #{nuuid}, #{nuploadpath}, #{nfiletype}, #{ntc_no} )
+       ]]>
+   </insert>
+
+
+<!-- 특정 공지글의 모든 첨부파일 조회 -->
+   <!-- 서버의 첨부파일 기본저장 경로는 리터럴 문자열로 처리 -->
+   <select id="select_notice_file_no"
+      resultType="com.spring.tmz.domain.Notice_fileVO">
+       <![CDATA[
+		       SELECT nfilename, nuuid, nuploadpath, nfiletype, ntc_no 
+		       FROM trip.tbl_notice_file
+		       WHERE ntc_no = #{ntc_no}
+       ]]>
+   </select>
+
+<!-- 특정 공지글의 첨부파일 삭제 -->
+   <delete id="delete_notice_file" >
+ 		<![CDATA[
+ 			DELETE trip.tbl_notice_file WHERE nuuid = #{nuuid}
+		 ]]>
+   </delete>
+
+
+<!-- 특정 공지글의 모든 첨부파일 삭제 -->
+
+   <delete id="delete_notice_allfile">
+	 <![CDATA[
+		 DELETE FROM trip.tbl_notice_file WHERE ntc_no = #{ntc_no}
+	 ]]>
+   </delete>
+
+
+<!-- 하루 전의 공지글 첨부파일 정보 조회 -->
+    <select id="select_notice_file_before_one" resultType="com.spring.tmz.domain.Notice_fileVO">
+       <![CDATA[
+	          SELECT * FROM trip.tbl_notice_file
+	          WHERE nuploadpath = TO_CHAR(sysdate -1 ,'yyyy\mm\dd')
+       ]]>
+    </select>
+
+
+
+</mapper>

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+ "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.spring.tmz.mapper.Common_mapper">
+ 
+ 	<sql id="pagingHeader">
+ 	
+	SELECT T.* FROM (
+    	SELECT ROWNUM rn, A.* FROM (
+    	
+ 	</sql>
+ 	
+ 	
+ 	<sql id="pagingFooter">
+ 	
+ 	       	<![CDATA[  
+       	) A
+             WHERE   1=1  		
+       		AND rownum <= (#{pageNum} * #{rowCntPerPage})  
+            ) T
+            WHERE rn >= ((#{pageNum} * #{rowCntPerPage}) - (#{rowCntPerPage} - 1))
+ 		]]> 
+ 		
+ 	</sql>
+ 	
+ 	
+ 	
+ 	<sql id="select_country_header">
+ 	
+		SELECT count(*) FRND_COUNTRY FROM TBL_FRIEND WHERE FRND_COUNTRY = 
+    	
+ 	</sql>
+ 	
+ 	
+ 	<sql id="select_country_footer">
+ 	
+		AND FRND_STATUS = 0
+    	
+ 	</sql>
+ 		
+ 	<sql id="select_country_footer2">
+ 	
+		AND FRND_STATUS = 1
+    	
+ 	</sql>
+ 	
+ 	
+ 	<sql id="select_continent_header">
+ 	
+		SELECT count(*) CONTINENT_NAME
+		FROM TBL_COUNTRY INNER JOIN TBL_FRIEND
+		ON (TBL_COUNTRY.COUNTRY_NAME = TBL_FRIEND.FRND_COUNTRY)
+		WHERE CONTINENT_NAME = 
+    	
+ 	</sql>
+ 	
+ 	
+ 	<sql id="select_continent_footer">
+ 	
+		AND FRND_STATUS = 0
+		ORDER BY 1
+    	
+ 	</sql>
+ 	
+ 	
+ 	<sql id="select_continent_footer2">
+ 	
+		AND FRND_STATUS = 1
+		ORDER BY 1
+    	
+ 	</sql>
+ 	
+</mapper>

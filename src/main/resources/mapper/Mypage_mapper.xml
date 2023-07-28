@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper	namespace = "com.spring.tmz.mapper.Mypage_mapper">
+
+	<!-- mypage 디테일-->
+	<select id="select_mypage_detail" resultType="com.spring.tmz.domain.UserinfoVO">
+		select i.user_id, i.user_name, i.user_pw, 
+        	i.user_birth, i.user_tag, i.user_email,
+        	i.user_delflag, avg(r.rate_num)AS user_rate
+	    from trip.tbl_userinfo i
+	    left outer join trip.tbl_userinfo_rate r
+	    on i.user_id = r.rated_id
+        where i.user_id = #{user_id} 
+        group by i.user_id, i.user_name, i.user_pw, i.user_birth, i.user_tag, i.user_delflag, i.user_email
+		
+	</select>
+	
+	<!-- mypage 수정-->
+	<update id="update_mypage" parameterType="com.spring.tmz.domain.UserinfoVO" >
+		update trip.tbl_userinfo
+		set user_birth = #{user_birth}, user_tag = #{user_tag}, user_email = #{user_email}
+		where user_id = #{user_id}
+	</update>
+	
+	<!-- mypage 비번 수정-->
+	<update id="update_mypw" parameterType="com.spring.tmz.domain.UserinfoVO" >
+		update trip.tbl_userinfo
+		set user_pw = #{user_pw}
+		where user_id = #{user_id}
+	</update>
+	
+	<!-- mypage 회원탈퇴-->
+	<!-- <delete id="delete_myid">	</delete> -->
+	<update id="update_mydelflag" parameterType="com.spring.tmz.domain.UserinfoVO">
+		update trip.tbl_userinfo
+		set USER_DELFLAG = 1, ENABLED = 0
+		where user_id = #{user_id}
+	</update>
+	
+	<!-- mypage 동행글 리스트-->
+	<select id="select_myfrnd_list" resultType="com.spring.tmz.domain.FriendVO">
+	<![CDATA[
+		select b.frnd_no, b.frnd_title, b.frnd_country, b.frnd_city, b.frnd_startdate, b.frnd_enddate
+		from (
+		      SELECT ROWNUM as rn, a.*
+		      FROM trip.tbl_friend a
+		      WHERE ROWNUM <= (20 * #{page_num}) AND frnd_writer = #{user_id}
+		      ) b
+		WHERE rn >= (20 * #{page_num}) - (20 - 1)
+		order by frnd_no desc
+	]]>
+	</select>
+	
+	<!-- mypage 동행글 리스트-->
+	<select id="select_myfrnd_list_admin" resultType="com.spring.tmz.domain.FriendVO">
+	<![CDATA[
+		select b.frnd_no, b.frnd_title, b.frnd_country, b.frnd_city, b.frnd_startdate, b.frnd_enddate
+		from (
+		      SELECT ROWNUM as rn, a.*
+		      FROM trip.tbl_friend a
+		      WHERE frnd_writer = #{user_id}
+		      ) b
+		order by frnd_no desc
+	]]>
+	</select>
+	
+	<!-- mypage 후기글 리스트 -->
+	<select id="select_myrv_list" resultType="com.spring.tmz.domain.ReviewVO">
+		select rv_no, rv_delflag, rv_title, rv_regdate, rv_replcnt
+		from trip.tbl_review where rv_writer = #{user_id} order by rv_no desc
+	</select>
+	
+	<!-- mypage 지난 동행 리스트 -->
+	<select id="select_myprty_list" resultType="com.spring.tmz.domain.PartyVO">
+		<![CDATA[
+		select *
+		from(select ROWNUM as rn, f.frnd_no, f.frnd_country, f.frnd_city, 
+	        		f.frnd_startdate, f.frnd_enddate, 
+	                p.party_member, r.rated_id, r.rating_id, r.rate_num
+			from trip.tbl_friend f 
+			join trip.tbl_confirm_party p
+			on f.frnd_no = p.frnd_no 
+	        and f.frnd_no in 
+						( select distinct FRND_NO from trip.tbl_confirm_party where party_member = #{user_id})
+	        left join trip.tbl_userinfo_rate r
+	        on p.party_member = r.rated_id and r.rating_id = #{user_id} and f.frnd_no = r.frnd_no
+	        WHERE party_member != #{user_id} AND ROWNUM <= (10 * #{page_num})
+	        )
+        WHERE rn >= ((10 * #{page_num}) - (10 - 1))
+        ]]>
+	</select>
+	
+	<!-- mypage 평점 전송 -->
+	<insert id="insert_rate" parameterType="com.spring.tmz.domain.Userinfo_rateVO">
+		insert into trip.tbl_userinfo_rate
+		values (#{rating_id}, #{rated_id}, #{frnd_no}, #{rate_num}, #{party_comment})
+	</insert>
+	
+	<!-- mypage 로그인 사용자가 상대방에게 준 평점 보이게 -->
+	<select id="select_rating_num" resultType="com.spring.tmz.domain.Userinfo_rateVO">
+		select rating_id, rated_id, rate_num
+		from trip.tbl_userinfo_rate where rating_id = #{user_id}
+	</select>
+	
+	<!-- mypage 평점 1회 전송을 위한 count -->
+	<select id="count_rate" resultType="Integer">
+	   select count(*) from trip.tbl_userinfo_rate where rating_id = #{rating_id} and rated_id = #{rated_id} and frnd_no = #{frnd_no}   
+	</select>
+	
+
+</mapper>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper	namespace = "com.spring.tmz.mapper.Country_mapper">
+	
+	<select id = "select_country_name" resultType="com.spring.tmz.domain.CountryVO">
+		SELECT * FROM trip.tbl_country
+		<if test="continent_name != null">
+			WHERE continent_name = #{continent_name}
+		</if>
+		<if test="continent_name == null">
+			WHERE continent_name = ''
+		</if>
+	</select>
+	
+</mapper>

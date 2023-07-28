@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper	namespace = "com.spring.tmz.mapper.Friend_file_mapper">
+
+	<!-- 첨부파일 추가 -->
+	<insert id="insert_attach_file">
+		<![CDATA[
+			INSERT INTO trip.tbl_friend_file
+			VALUES(#{fuuid}, #{ffilename}, #{fuploadpath}, #{frnd_no})
+		]]>
+	</insert>
+	
+	<!-- 특정 게시물의 첨부파일 조회 -->
+	<select id="select_attach_files" resultType="com.spring.tmz.domain.Friend_fileVO">
+		<![CDATA[
+			SELECT fuuid, ffilename, fuploadpath, frnd_no
+			FROM trip.tbl_friend_file
+			WHERE frnd_no = #{frnd_no}
+		]]>
+	</select>
+		
+	<update id = "update_attach_file">
+		UPDATE trip.tbl_friend_file
+		SET fuuid = #{fuuid}, ffilename = #{ffilename}, fuploadpath = #{fuploadpath}
+		WHERE frnd_no = #{frnd_no}
+	</update>
+
+
+</mapper>

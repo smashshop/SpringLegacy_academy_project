@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper	namespace = "com.spring.tmz.mapper.Friend_repl_mapper">
+	
+	<select id = "select_repl_list_nopaging" resultType = "com.spring.tmz.domain.Friend_replVO">
+		SELECT * FROM trip.tbl_friend_repl WHERE frnd_no = #{frnd_no}
+	</select>
+	
+	<select id = "select_repl_list" resultType = "com.spring.tmz.domain.Friend_replVO">
+	<![CDATA[
+		SELECT rp.*, fr.frnd_status
+		FROM (
+        		SELECT ROWNUM as rn, a.*
+        		FROM trip.tbl_friend_repl a
+        		WHERE frnd_no = #{frnd_no} AND ROWNUM <= (10 * #{page_num})
+      		 ) rp INNER JOIN trip.tbl_friend fr ON rp.frnd_no = fr.frnd_no
+		WHERE rn >= ((10 * #{page_num}) - (10 - 1))
+		ORDER BY frepl_regdate DESC
+	]]>
+	</select>
+	
+	<insert id = "insert_repl">
+		<selectKey keyProperty="frepl_no" order="BEFORE" resultType="int">
+			SELECT trip.seq_friend_repl.nextval FROM dual
+		</selectKey>
+		INSERT INTO trip.tbl_friend_repl
+		VALUES(#{frnd_no}, #{frepl_content}, #{frepl_writer}, DEFAULT, DEFAULT, #{frepl_no}, DEFAULT)
+	</insert>
+	
+	<update id="update_repl_confirm">
+		UPDATE trip.tbl_friend_repl
+		SET frepl_confirm = #{frepl_confirm}
+		WHERE frepl_no = #{frepl_no}
+	</update>
+	
+</mapper>

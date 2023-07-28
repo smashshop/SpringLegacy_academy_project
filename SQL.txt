@@ -1,0 +1,316 @@
+-- 1) userInfo 테이블 생성
+CREATE TABLE trip.tbl_userinfo(
+    user_id VARCHAR2(20) NOT NULL,
+    user_pw VARCHAR2(30) NOT NULL,
+    user_name VARCHAR2(50) NOT NULL,
+    user_email VARCHAR2(50) NOT NULL,
+    user_birth DATE NOT NULL,
+    user_regDate DATE DEFAULT sysdate,
+    user_tag VARCHAR2(100),
+    user_rate NUMBER(1, 1) DEFAULT 0,
+    user_delFlag CHAR(1) DEFAULT '0',
+    enabled CHAR(1) DEFAULT '1'
+) TABLESPACE users;
+
+--유저 아이디에 기본키 부여
+ALTER TABLE trip.tbl_userInfo
+ADD CONSTRAINT pk_userInfo_user_id PRIMARY KEY(user_id);
+
+-- 기본키명 변경 하는법
+-- ALTER TABLE trip.tbl_userInfo
+-- RENAME CONSTRAINT SYS_C007502 TO pk_userInfo_user_id;
+
+ALTER TABLE tbl_userInfo MODIFY user_pw VARCHAR2(30);
+
+COMMIT;
+
+--테스트 데이터
+INSERT INTO tbl_userinfo
+VALUES('user98', '1111', '1', '111@aaa.coom', '2022-03-05', DEFAULT, '2', DEFAULT, DEFAULT, DEFAULT);
+INSERT INTO tbl_userinfo
+VALUES('admin00', '1111', '2', '111@aaa.coom', '2022-03-05', DEFAULT, 'awd', DEFAULT, DEFAULT, DEFAULT);
+INSERT INTO tbl_userinfo
+VALUES('admin01', '1111', '3', '111@aaa.coom', '2022-03-05', DEFAULT, 'awd', DEFAULT, DEFAULT, DEFAULT);
+INSERT INTO tbl_userinfo
+VALUES('admin02', '1111', '4', '111@aaa.coom', '2022-03-05', DEFAULT, 'awdawd fwafawf', DEFAULT, DEFAULT, DEFAULT);
+INSERT INTO tbl_userinfo
+VALUES('user01', '1111', '5', '111@aaa.coom', '2022-03-05', DEFAULT, '2 2312', DEFAULT, DEFAULT, DEFAULT);
+
+SELECT * FROM tbl_userInfo;
+
+
+
+-- 2) tbl_auth_name 권한 이름 테이블 생성
+CREATE TABLE tbl_auth_name(
+    role_name VARCHAR2(20) NOT NULL
+)TABLESPACE users;
+
+ALTER TABLE tbl_auth_name
+ADD CONSTRAINT pk_auth_name_role_name PRIMARY KEY(role_name);
+
+--권한 삽입
+INSERT INTO tbl_auth_name VALUES ('ROLE_ADMIN');
+INSERT INTO tbl_auth_name VALUES ('ROLE_USER');
+INSERT INTO tbl_auth_name VALUES ('ROLE_SUPER');
+
+COMMIT;
+
+-- 3) tbl_user_auth 유저의 권한 정보 테이블 생성
+CREATE TABLE tbl_user_auth(
+    user_id VARCHAR2(20),
+    role_name VARCHAR2(20)
+)TABLESPACE users;
+
+--유저정보 테이블의 유저 아이디 값을 참조한다
+ALTER TABLE trip.tbl_user_auth
+ADD CONSTRAINT fk_user_auth_user_id_userinfo FOREIGN KEY(user_id)
+REFERENCES trip.tbl_userinfo(user_id) ON DELETE CASCADE;
+
+--권한 이름 테이블의 권한 값을 참조한다
+ALTER TABLE trip.tbl_user_auth
+ADD CONSTRAINT fk_user_auth_role_name_auth_name FOREIGN KEY(role_name)
+REFERENCES trip.tbl_auth_name(role_name);
+
+COMMIT;
+
+-- 4) tbl_userInfo_rate 테이블 생성
+CREATE TABLE trip.tbl_userInfo_rate(
+    rating_id VARCHAR2(20),
+    rated_id VARCHAR2(20),
+    rate_num NUMBER(1,1) NOT NULL
+) TABLESPACE users;
+
+COMMIT;
+
+-- 5) tbl_notice 테이블 생성
+CREATE TABLE trip.tbl_notice(
+    Ntc_no NUMBER(3), 
+    Ntc_title VARCHAR2(100) NOT NULL, 
+    Ntc_content VARCHAR2(1200) NOT NULL, 
+    Ntc_regDate TIMESTAMP(0) DEFAULT SYSTIMESTAMP(0), 
+    Ntc_modDate TIMESTAMP(0) DEFAULT SYSTIMESTAMP(0), 
+    Ntc_writer VARCHAR2(20) NOT NULL
+) TABLESPACE users;
+
+ALTER TABLE trip.tbl_notice
+ADD CONSTRAINT pk_notice_Ntc_no PRIMARY KEY (Ntc_no);
+
+COMMIT;
+
+-- 6) tbl_review 테이블 생성
+CREATE TABLE trip.tbl_review(
+    rv_no NUMBER(3),
+    rv_title VARCHAR2(100) NOT NULL,
+    rv_content VARCHAR2(900) NOT NULL,
+    rv_regdate TIMESTAMP(0) DEFAULT SYSTIMESTAMP(0), 
+    rv_moddate TIMESTAMP(0) DEFAULT SYSTIMESTAMP(0), 
+    rv_writer VARCHAR2(20) NOT NULL,
+    rv_replcnt NUMBER(3) DEFAULT(0),
+    rv_delFlag NUMBER(1) DEFAULT 0
+ ) TABLESPACE users;
+
+ALTER TABLE trip.tbl_review
+ADD CONSTRAINT pk_review_rv_no PRIMARY KEY (rv_no);
+
+-- delFlag 컬럼 추가
+-- ALTER TABLE trip.tbl_review
+-- ADD rv_delFlag NUMBER(1) DEFAULT 0;
+
+COMMIT;
+
+-- 7) tbl_review_repl 테이블 생성
+CREATE TABLE trip.tbl_review_repl(
+    rv_no NUMBER(3),
+    rrepl_content VARCHAR2(300) NOT NULL,
+    rrepl_writer VARCHAR2(20) NOT NULL,
+    rrepl_regDate TIMESTAMP(0) DEFAULT SYSTIMESTAMP(0), 
+    rrepl_modDate TIMESTAMP(0) DEFAULT SYSTIMESTAMP(0), 
+    rrepl_no NUMBER(3),
+    rrepl_pno NUMBER(3)
+) TABLESPACE users;
+
+CREATE INDEX trip.idx_review_repl_rv_no_rrepl_no ON trip.tbl_review_repl(rv_no, rrepl_no);
+
+ALTER TABLE trip.tbl_review_repl DROP CONSTRAINT pk_review_repl_rrepl_no;
+
+ALTER TABLE trip.tbl_review_repl
+ADD CONSTRAINT pk_review_repl_rrepl_no PRIMARY KEY (rv_no, rrepl_no)
+USING INDEX idx_review_repl_rv_no_rrepl_no;
+
+ALTER TABLE trip.tbl_review_repl
+ADD CONSTRAINT fk_review_repl_rv_no_review FOREIGN KEY (rv_no) 
+REFERENCES trip.tbl_review(rv_no) ON DELETE CASCADE;
+
+ALTER TABLE trip.tbl_review_repl
+ADD CONSTRAINT fk_review_repl_rrepl_pno_review_repl FOREIGN KEY (rv_no, rrepl_pno) 
+REFERENCES trip.tbl_review_repl(rv_no, rrepl_no) ON DELETE CASCADE;
+
+COMMIT;
+
+-- 8) tbl_friend 테이블 생성
+CREATE TABLE trip.tbl_friend(
+    frnd_no NUMBER(5),
+    frnd_title VARCHAR2(100) NOT NULL,
+    frnd_writer VARCHAR2(20) NOT NULL,
+    frnd_startDate DATE NOT NULL,
+    frnd_endDate DATE NOT NULL,
+    frnd_country VARCHAR2(45),
+    frnd_city VARCHAR2(60) NOT NULL,
+    frnd_content VARCHAR2(900) NOT NULL,
+    frnd_regDate TIMESTAMP(0) DEFAULT SYSTIMESTAMP(0),
+    frnd_modDate TIMESTAMP(0) DEFAULT SYSTIMESTAMP(0),
+    frnd_member_cnt NUMBER(2) NOT NULL,      -- 최대 모집 인원
+    frnd_status NUMBER(1) DEFAULT 0,
+    frnd_delFlag NUMBER(1) DEFAULT 0,     -- 0: 유지, 1: 삭제 요청
+    frnd_now_mem NUMBER(2) DEFAULT 0,
+    frnd_tag VARCHAR2(100)  -- HashTag 값
+) TABLESPACE users;
+
+-- 글번호(frnd_no) 시퀀스 생성
+CREATE SEQUENCE trip.seq_friend;
+COMMIT;
+
+ALTER TABLE trip.tbl_friend
+ADD CONSTRAINT pk_friend_frnd_No PRIMARY KEY(frnd_No);
+
+ALTER TABLE trip.tbl_friend
+ADD CONSTRAINT fk_friend_frnd_country_country FOREIGN KEY (frnd_country) 
+REFERENCES trip.tbl_country(country_name) ON DELETE CASCADE;
+
+-- delFlag 컬럼 추가
+-- ALTER TABLE trip.tbl_friend 
+-- ADD frnd_delFlag NUMBER(1) DEFAULT 0;
+
+-- 기존 frnd_status 컬럼 boolean 타입으로 변경
+-- ALTER TABLE trip.tbl_friend 
+-- ADD frnd_status NUMBER(1) DEFAULT 0;
+
+-- frnd_now_mem 컬럼 추가 (현재 모집 인원)
+-- ALTER TABLE trip.tbl_friend 
+-- ADD frnd_now_mem NUMBER(2) DEFAULT 0;
+
+-- frnd_tag 컬럼 추가 #HashTag 값
+-- ALTER TABLE trip.tbl_friend 
+-- ADD frnd_tag VARCHAR2(100);
+
+-- frnd_continent 컬럼 추가
+-- ALTER TABLE trip.tbl_friend
+-- ADD frnd_continent VARCHAR2(45);
+
+COMMIT;
+
+-- 9) tbl_friend_repl 테이블 생성
+CREATE TABLE trip.tbl_friend_repl(
+    frnd_No NUMBER(3), -- trip.tbl_friend의 frnd_No 컬럼 FK 참조
+    frepl_content VARCHAR2(300) NOT NULL,
+    frepl_writer VARCHAR2(20) NOT NULL,
+    frepl_regDate TIMESTAMP(0) DEFAULT SYSTIMESTAMP(0),
+    frepl_modDate TIMESTAMP(0) DEFAULT SYSTIMESTAMP(0),
+    frepl_No NUMBER(3),
+    frepl_confirm CHAR(1) DEFAULT '0'
+) TABLESPACE users;
+
+-- 댓글번호(frepl_no) 시퀀스 생성
+CREATE SEQUENCE trip.seq_friend_repl
+START WITH 2;
+
+COMMIT;
+
+ALTER TABLE trip.tbl_friend_repl
+ADD CONSTRAINT fk_friend_repl_frnd_No_friend FOREIGN KEY(frnd_No)
+REFERENCES trip.tbl_friend(frnd_No) ON DELETE CASCADE;
+
+ALTER TABLE trip.tbl_friend_repl
+ADD CONSTRAINT pk_friend_repl_frepl_No PRIMARY KEY(frepl_No);
+
+COMMIT;
+
+-- 10) tbl_review_file 테이블 생성
+CREATE TABLE trip.tbl_review_file(
+    ruuid VARCHAR2(100) NOT NULL,
+    rfilename VARCHAR2(100) NOT NULL,
+    ruploadpath VARCHAR2(100) NOT NULL,
+    rv_no NUMBER(3, 0) NOT NULL
+) TABLESPACE users;
+
+ALTER TABLE tbl_review_file
+ADD CONSTRAINT pk_review_file_ruuid PRIMARY KEY (ruuid);
+
+ALTER TABLE tbl_review_file
+ADD CONSTRAINT fk_review_file_rv_no_friend FOREIGN KEY (rv_no)
+REFERENCES trip.tbl_friend(frnd_no) ON DELETE CASCADE;
+
+COMMIT;
+
+-- 11) tbl_friend_file 테이블 생성
+CREATE TABLE tbl_friend_file(
+    fuuid VARCHAR2(100) NOT NULL,
+    ffilename VARCHAR2(100) NOT NULL,
+    fuploadpath VARCHAR2(100) NOT NULL,
+    frnd_no NUMBER(3, 0) NOT NULL
+) TABLESPACE users;
+
+ALTER TABLE tbl_friend_file
+ADD CONSTRAINT pk_friend_file_fuuid PRIMARY KEY (fuuid);
+
+ALTER TABLE tbl_friend_file
+ADD CONSTRAINT fk_friend_file_frnd_no_friend FOREIGN KEY (frnd_no)
+REFERENCES trip.tbl_friend(frnd_no) ON DELETE CASCADE;
+
+COMMIT;
+
+-- 12) tbl_continent 테이블 생성
+CREATE TABLE tbl_continent(
+    continent_no NUMBER(3),
+    continent_name VARCHAR2(45)
+) TABLESPACE users;
+
+-- continent_no 컬럼 추가
+-- ALTER TABLE trip.tbl_continent
+-- ADD continent_no NUMBER(3);
+
+ALTER TABLE tbl_continent
+ADD CONSTRAINT pk_continent_continent_name PRIMARY KEY (continent_name);
+
+COMMIT;
+
+-- 13) tbl_country 테이블 생성
+CREATE TABLE tbl_country(
+    continent_no NUMBER(3),
+    country_name VARCHAR2(45) NOT NULL,
+    continent_name VARCHAR2(45)    
+) TABLESPACE users;
+
+-- continent_no 컬럼 추가
+-- ALTER TABLE trip.tbl_country
+-- ADD continent_no NUMBER(3);
+
+ALTER TABLE trip.tbl_country
+ADD CONSTRAINT pk_country_country_name PRIMARY KEY (country_name);
+
+ALTER TABLE trip.tbl_country
+ADD CONSTRAINT fk_country_continent_name_continent FOREIGN KEY (continent_name)
+REFERENCES trip.tbl_continent(continent_name) ON DELETE CASCADE;
+
+COMMIT;
+
+-- 14) tbl_confirm_party 테이블 생성
+CREATE TABLE trip.tbl_confirm_party(
+    frnd_no NUMBER(3) NOT NULL,
+    party_member VARCHAR2(20),
+    party_writer_replier NUMBER(1) DEFAULT 0
+) TABLESPACE users;
+
+-- party_member 컬럼 추가
+-- ALTER TABLE trip.tbl_confirm_party
+-- ADD party_member VARCHAR2(20);
+
+-- party_writer_replier NUMBER(1) 컬럼 추가
+-- ALTER TABLE trip.tbl_confirm_party
+-- ADD party_writer_replier NUMBER(1) DEFAULT 0;
+
+ALTER TABLE trip.tbl_confirm_party
+ADD CONSTRAINT fk_confirm_party_party_member_userInfo FOREIGN KEY (party_member)
+REFERENCES trip.tbl_userinfo(user_id) ON DELETE CASCADE;
+
+COMMIT;

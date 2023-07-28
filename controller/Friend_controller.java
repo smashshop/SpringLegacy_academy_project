@@ -38,7 +38,6 @@ public class Friend_controller {
 	private Continent_service continent_service;
 	private Userinfo_service userinfo_service;
 	
-	//김상원
 	//상세페이지 요청
 	@GetMapping("/friend-detail")
 	public String show_frnd_detail(Integer frnd_no, Model model) {
@@ -101,10 +100,7 @@ public class Friend_controller {
 	public ResponseEntity<List<Userinfo_rateVO>> get_user_detail(@PathVariable("user_id") String user_id){
 		return new ResponseEntity<List<Userinfo_rateVO>> (friend_service.get_userinfo_rate(user_id), HttpStatus.OK);
 	}
-	// /.end김상원
 	
-	
-	//한태희
 	//게시물 목록 조회
 	@GetMapping("/friend-list")
 	public String show_friend_list(PagingDTO pagingDTO, Model model) {
@@ -154,7 +150,6 @@ public class Friend_controller {
 		
 		return "redirect:/friend/friend-list";
 	}
-	// /.end 한태희
 	
 	// ajax 대륙 선택시 실행할 메소드
 	@GetMapping(value = "get-country-list", produces = "application/json;charset=UTF-8")

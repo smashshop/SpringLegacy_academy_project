@@ -1,1 +1,1 @@
-# 프로젝트 코딩한부분 업로드
+Spring Legacy, jsp, Spring Security, Bootstrap5, oracleDB
